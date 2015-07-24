@@ -142,87 +142,88 @@ function defaultmailtokens_civicrm_preProcess($formName, &$form) {
  * Implements hook_civicrm_tokenValues().
  * // found https://civicrm.org/blogs/colemanw/create-your-own-tokens-fun-and-profit
 */
-//~ function defaultmailtokens_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
-	//~ 
-	//~ //echo 'values:\n',print_r($values,true),"\ncids\n",print_r($cids,true),"\njob\n",print_r($job,true),"\ntokens\n",print_r($tokens,true),"\ncontext\n",print_r($context,true),"\n";
-	//~ 
-	//~ if (!empty($values)) {
-		//~ if (is_array($cids)) {
-			//~ /* values looks like
-			 //~ Array
-				//~ (
-					//~ [250331] => Array
-						//~ (
-							//~ [contact_id] => 250331
-							//~ [display_name] => John Smith
-							//~ [preferred_mail_format] => 
-							//~ [hash] => 56ca33ecaefbe170ae155660cf1812c6
-							//~ [first_name] => John
-							//~ [is_deceased] => 0
-							//~ [email_id] => 1235
-							//~ [on_hold] => 0
-						//~ )
-						//~ ... more records with pertinanat tokens ...
-				//~ )
-			//~ */
-			//~ foreach ($cids as $cid) {
-				//~ if (empty($values[$cid])) {
-					//~ // for some reason we werent passed a contact
-					 //~ $contact = civicrm_api3('Contact','get',array(
-						//~ 'contact_id' => $cid,
-					//~ ));
-					//~ if (!empty($contact['is_error'])) continue;
-					//~ $values[$cid] = array(
-						//~ 'contact_id' => $cid,
-						//~ 'display_name' => $contact['values'][$cid]['display_name'],
-						//~ 'preferred_mail_format' => $contact['values'][$cid]['preferred_mail_format'],
-						//~ 'is_deceased' => $contact['values'][$cid]['is_deceased'],
-						//~ 'email_id' => $contact['values'][$cid]['email_id'],
-						//~ 'on_hold' => $contact['values'][$cid]['on_hold'],						
-					//~ );
-				//~ }
-				//~ $used = array_key_exists('first_name',$values[$cid])||!empty($tokens['contact']['first_name']);
-				//~ if ($used&&empty($values[$cid]['first_name'])) $values[$cid]['first_name'] = 'Friend';
-			//~ }
-		//~ } else {
-			//~ /* we were passes a single contact record here */
-		//~ }
-	//~ }
-//~ 
-	//~ //echo 'values:\n',print_r($values,true),"\ncids\n",print_r($cids,true),"\njob\n",print_r($job,true),"\ntokens\n",print_r($tokens,true),"\ncontext\n",print_r($context,true),"\n"; exit;
-//~ }
+function defaultmailtokens_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+	
+	//echo 'values:\n',print_r($values,true),"\ncids\n",print_r($cids,true),"\njob\n",print_r($job,true),"\ntokens\n",print_r($tokens,true),"\ncontext\n",print_r($context,true),"\n";
+	
+	if (!empty($values)) {
+		if (is_array($cids)) {
+			/* values looks like
+			 Array
+				(
+					[250331] => Array
+						(
+							[contact_id] => 250331
+							[display_name] => John Smith
+							[preferred_mail_format] => 
+							[hash] => 56ca33ecaefbe170ae155660cf1812c6
+							[first_name] => John
+							[is_deceased] => 0
+							[email_id] => 1235
+							[on_hold] => 0
+						)
+						... more records with pertinanat tokens ...
+				)
+			*/
+			foreach ($cids as $cid) {
+				if (empty($values[$cid])) {
+					// for some reason we werent passed a contact
+					 $contact = civicrm_api3('Contact','get',array(
+						'contact_id' => $cid,
+					));
+					if (!empty($contact['is_error'])) continue;
+					$values[$cid] = array(
+						'contact_id' => $cid,
+						'display_name' => $contact['values'][$cid]['display_name'],
+						'preferred_mail_format' => $contact['values'][$cid]['preferred_mail_format'],
+						'is_deceased' => $contact['values'][$cid]['is_deceased'],
+						'email_id' => $contact['values'][$cid]['email_id'],
+						'on_hold' => $contact['values'][$cid]['on_hold'],						
+					);
+				}
+				$used = array_key_exists('first_name',$values[$cid])||!empty($tokens['contact']['first_name']);
+				if ($used&&empty($values[$cid]['first_name'])) $values[$cid]['first_name'] = 'Friend';
+			}
+		} else {
+			/* we were passes a single contact record here */
+			if (empty($values['first_name'])) $values['first_name'] = 'Friend';
+		}
+	}
+
+	//echo 'values:\n',print_r($values,true),"\ncids\n",print_r($cids,true),"\njob\n",print_r($job,true),"\ntokens\n",print_r($tokens,true),"\ncontext\n",print_r($context,true),"\n"; exit;
+}
 
 // https://civicrm.org/blogs/civicrm-team/civimail-how-add-default-values-empty-tokens?q=blogs/civicrm-team/civimail-how-add-default-values-empty-tokens
-function defaultmailtokens_civicrm_tokenValues( &$values, &$contactIDs, $job = null, $tokens = array(), $context = null) {
-    if ( is_array( $contactIDs ) ) {
-        $single = false;
-    } else {
-        $contactIDs = array( $contactIDs );
-        $single = true;
-    }
-
-    // lets assume we want default values for the below tokens
-    $defaults = array( 
-		'first_name'  => 'Friend',
-		//~ 'last_name'   => 'DEFAULT LAST',
-		//~ 'middle_name' => 'DEFAULT MIDDLE',
-		//~ 'home_URL'    => 'HOME URL'
-	);
-
-    foreach ( $contactIDs as $cid ) {
-        if ( $single ) {
-            $value =& $values;
-        } else {
-            $value =& $values[$cid];
-        }
-
-        foreach ( $defaults as $k => $v ) {
-            if ( ! isset( $value[$k] ) || empty( $value[$k] ) ) {
-                $value[$k] = $v;
-            }
-        }
-    }
-}
+//~ function defaultmailtokens_civicrm_tokenValues( &$values, &$contactIDs, $job = null, $tokens = array(), $context = null) {
+    //~ if ( is_array( $contactIDs ) ) {
+        //~ $single = false;
+    //~ } else {
+        //~ $contactIDs = array( $contactIDs );
+        //~ $single = true;
+    //~ }
+//~ 
+    //~ // lets assume we want default values for the below tokens
+    //~ $defaults = array( 
+		//~ 'first_name'  => 'Friend',
+		//~ // 'last_name'   => 'DEFAULT LAST',
+		//~ // 'middle_name' => 'DEFAULT MIDDLE',
+		//~ // 'home_URL'    => 'HOME URL'
+	//~ );
+//~ 
+    //~ foreach ( $contactIDs as $cid ) {
+        //~ if ( $single ) {
+            //~ $value =& $values;
+        //~ } else {
+            //~ $value =& $values[$cid];
+        //~ }
+//~ 
+        //~ foreach ( $defaults as $k => $v ) {
+            //~ if ( ! isset( $value[$k] ) || empty( $value[$k] ) ) {
+                //~ $value[$k] = $v;
+            //~ }
+        //~ }
+    //~ }
+//~ }
 
 /*
 Array
